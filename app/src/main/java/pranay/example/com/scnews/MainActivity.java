@@ -2,6 +2,8 @@ package pranay.example.com.scnews;
 
 import android.app.SearchManager;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -9,6 +11,7 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -31,7 +34,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayout.OnRefreshListener{
-    public static final String API_KEY = "b8fc43ef9677400f9b3ce055e67941b9";
+    public static final String API_KEY = "";
     private RecyclerView recyclerView;
     private RecyclerView.LayoutManager layoutManager;
     private List<Article> articles = new ArrayList<>();
@@ -39,6 +42,8 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
     private String TAG = MainActivity.class.getSimpleName();
     private TextView topHeadline;
     private SwipeRefreshLayout swipeRefreshLayout;
+    TinyDB tinydb;
+    private NetworkDetector mNetworkDetector;
 
 
 
@@ -50,12 +55,19 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
         swipeRefreshLayout.setOnRefreshListener(this);
         swipeRefreshLayout.setColorSchemeResources(R.color.colorAccent);
 
+
         topHeadline = findViewById(R.id.topheadelines);
         recyclerView = findViewById(R.id.recyclerView);
         layoutManager = new LinearLayoutManager(MainActivity.this);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setNestedScrollingEnabled(false);
+        mNetworkDetector = new NetworkDetector();
+        tinydb = new TinyDB(getApplicationContext());
+        Log.d("NEWSARTICLE", String.valueOf(tinydb.getListObject("news",Article.class)));
+//        sqLiteDatabase = this.openOrCreateDatabase("NEWS", MODE_PRIVATE, null);
+//        String cmd = "CREATE TABLE IF NOT EXISTS NEWS ( id INTEGER PRIMARY KEY, title VARCHAR, description VARCHAR, url VARCHAR, urlToImage VARCHAR, articleContent VARCHAR)";
+//        sqLiteDatabase.execSQL(cmd);
 
         onLoadingSwipeRefresh("");
 
@@ -63,17 +75,18 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
 
     }
 
-    public void LoadJson(final String keyword){
+    public void LoadJson(final String keyword) {
+        if (mNetworkDetector.isConnectingToInternet(this)) {
         swipeRefreshLayout.setRefreshing(true);
 
-        ApiInterface apiInterface = ApiClient.getApiClient().create(ApiInterface.class);
+        final ApiInterface apiInterface = ApiClient.getApiClient().create(ApiInterface.class);
 
         String country = Utils.getCountry();
         String language = Utils.getLanguage();
 
         Call<News> call;
 
-        if (keyword.length() > 0 ){
+        if (keyword.length() > 0) {
             call = apiInterface.getNewsSearch(keyword, language, "publishedAt", API_KEY);
         } else {
             call = apiInterface.getNews(country, API_KEY);
@@ -82,13 +95,18 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
         call.enqueue(new Callback<News>() {
             @Override
             public void onResponse(Call<News> call, Response<News> response) {
-                if (response.isSuccessful() && response.body().getArticle() != null){
+                if (response.isSuccessful() && response.body().getArticle() != null) {
 
-                    if (!articles.isEmpty()){
+                    if (!articles.isEmpty()) {
                         articles.clear();
                     }
 
                     articles = response.body().getArticle();
+                    tinydb.remove("news");
+                    tinydb.putListObject("news", articles);
+//                    Log.d("NEWSARTICLE", String.valueOf(tinydb.getListObject("news",Article.class)));
+
+
                     adapter = new ArticleAdapter(articles, MainActivity.this);
                     recyclerView.setAdapter(adapter);
                     adapter.notifyDataSetChanged();
@@ -98,6 +116,8 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
 
 
                 } else {
+//                    Log.d("NEWSARTICLE", String.valueOf(tinydb.getListObject("news",Article.class)));
+
 
                     topHeadline.setVisibility(View.INVISIBLE);
                     swipeRefreshLayout.setRefreshing(false);
@@ -116,7 +136,6 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
                     }
 
 
-
                 }
             }
 
@@ -127,6 +146,21 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
 
             }
         });
+        }else{
+            ArrayList<Object> articlesObject = tinydb.getListObject("news",Article.class);
+            for(Object objs : articlesObject){
+                articles.add((Article) objs);
+            }
+            Log.d("ARTICLES", String.valueOf(articles));
+            adapter = new ArticleAdapter(articles, MainActivity.this);
+            recyclerView.setAdapter(adapter);
+            adapter.notifyDataSetChanged();
+
+            topHeadline.setVisibility(View.VISIBLE);
+            swipeRefreshLayout.setRefreshing(false);
+
+
+        }
 
     }
     @Override
