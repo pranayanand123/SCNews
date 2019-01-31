@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
         final ApiInterface apiInterface = ApiClient.getApiClient().create(ApiInterface.class);
 
         String country = Utils.getCountry(getApplicationContext());
+        Log.d("COUNTRY", country);
         String language = Utils.getLanguage();
 
         Call<News> call;

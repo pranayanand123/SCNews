@@ -2,12 +2,16 @@ package pranay.example.com.scnews;
 
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.app.NotificationCompat;
@@ -27,6 +31,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import pranay.example.com.scnews.Models.Article;
@@ -44,6 +49,8 @@ public class NotificationServiceFirebase extends JobService {
     Bitmap image;
     RemoteViews expandedView;
     RemoteViews collapsedView;
+    NotificationTarget notificationTarget;
+    private final int notifId = (int) ((new Date().getTime() / 1000L) % Integer.MAX_VALUE);
     @Override
     public boolean onStartJob(JobParameters job) {
         Log.d("NOTIFICATIONJOB", "1");
@@ -103,50 +110,81 @@ public class NotificationServiceFirebase extends JobService {
 
     }
 
-    private void showNotification(final Article article) {
+    private void showNotification(Article article) {
         Log.d("NOTIFICATIONJOB", "3");
+        Intent intent = new Intent(this, FullArticle.class);
+        intent.putExtra("url", article.getUrl());
+        intent.putExtra("title", article.getTitle());
+        intent.putExtra("img",  article.getUrlToImage());
+        intent.putExtra("date",  article.getPublishedAt());
+        intent.putExtra("source",  article.getSource().getName());
+        intent.putExtra("author",  article.getAuthor());
+//        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, notifId /* Request code */, intent,
+                PendingIntent.FLAG_ONE_SHOT);
+        String channelId = "oreo";
 
-        expandedView = new RemoteViews(getPackageName(), R.layout.notification_expanded);
-        expandedView.setTextViewText(R.id.timestamp, DateUtils.formatDateTime(this, System.currentTimeMillis(), DateUtils.FORMAT_SHOW_TIME));
-        expandedView.setTextViewText(R.id.content_title, article.getTitle());
-        expandedView.setTextViewText(R.id.content_text, article.getDescription());
+        Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
-
-        collapsedView = new RemoteViews(getPackageName(), R.layout.notification_collapsed);
-        collapsedView.setTextViewText(R.id.timestamp, DateUtils.formatDateTime(this, System.currentTimeMillis(), DateUtils.FORMAT_SHOW_TIME));
-        collapsedView.setTextViewText(R.id.content_title, article.getTitle());
-        collapsedView.setTextViewText(R.id.content_text, article.getDescription());
+//        expandedView = new RemoteViews(getPackageName(), R.layout.notification_expanded);
+//        expandedView.setTextViewText(R.id.timestamp, DateUtils.formatDateTime(this, System.currentTimeMillis(), DateUtils.FORMAT_SHOW_TIME));
+//        expandedView.setTextViewText(R.id.content_title, article.getTitle());
+//        expandedView.setTextViewText(R.id.content_text, article.getDescription());
+//
+//
+//        collapsedView = new RemoteViews(getPackageName(), R.layout.notification_collapsed);
+//        collapsedView.setTextViewText(R.id.timestamp, DateUtils.formatDateTime(this, System.currentTimeMillis(), DateUtils.FORMAT_SHOW_TIME));
+//        collapsedView.setTextViewText(R.id.content_title, article.getTitle());
+//        collapsedView.setTextViewText(R.id.content_text, article.getDescription());
         NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(getApplicationContext())
+                new NotificationCompat.Builder(getApplicationContext(),channelId)
                         .setSmallIcon(R.mipmap.ic_launcher_round)
                         .setContentTitle(article.getTitle())
                         .setContentText(article.getDescription()).setAutoCancel(true)
-                        .setContentIntent(PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0))
-                        .setCustomContentView(collapsedView)
-                        .setCustomBigContentView(expandedView)
-                        .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+                        .setSound(defaultSoundUri)
+                        .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
+                        .setContentIntent(pendingIntent);
+        NotificationCompat.BigTextStyle bigText = new NotificationCompat.BigTextStyle();
+        bigText.bigText(article.getDescription());
+        bigText.setBigContentTitle(article.getTitle());
         Notification notification = builder.build();
-        final NotificationTarget notificationTarget = new NotificationTarget(
-                getApplicationContext(),
-                R.id.rl_expanded,
-                expandedView,
-                notification,
-                0);
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                Glide.get(getApplicationContext()).clearMemory();
-                Glide.with(getApplicationContext())
-                        .asBitmap()
-                        .load(article.getUrlToImage())
-                        .into( notificationTarget );
-            }
-        });
+
+//        new Handler(Looper.getMainLooper()).post(new Runnable() {
+//            @Override
+//            public void run() {
+////                Glide.get(getApplicationContext()).clearMemory();
+//
+//            }
+//        });
 
 
         NotificationManager notificationManager = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(channelId,
+                    article.getTitle(),
+                    NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(channel);
+        }
 
-        notificationManager.notify(0,notification);
+        notificationManager.notify(notifId,notification);
+//        notificationTarget = new NotificationTarget(
+//                getApplicationContext(),
+//                R.id.rl_expanded,
+//                expandedView,
+//                notification,
+//                0);
+//        new Handler(Looper.getMainLooper()).post(new Runnable() {
+//            @Override
+//            public void run() {
+////                Glide.get(getApplicationContext()).clearMemory();
+//                Glide.with(getApplicationContext())
+//                        .asBitmap()
+//                        .load(article.getUrlToImage())
+//                        .into( notificationTarget );
+//
+//            }
+//        });
+
 
 
 
