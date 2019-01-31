@@ -45,7 +45,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayout.OnRefreshListener{
-    public static final String API_KEY = "b8fc43ef9677400f9b3ce055e67941b9";
+    public static final String API_KEY = "";
     private RecyclerView recyclerView;
     private RecyclerView.LayoutManager layoutManager;
     private List<Article> articles = new ArrayList<>();
@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
                 .setRecurring(true)
                 .setLifetime(Lifetime.FOREVER)
                 .setService(NotificationServiceFirebase.class)
-                .setTrigger(Trigger.executionWindow(0,20))
+                .setTrigger(Trigger.executionWindow(60*60*4,60*60*4+60))
                 .setReplaceCurrent(false)
                 .setRetryStrategy(RetryStrategy.DEFAULT_EXPONENTIAL)
                 .setConstraints(Constraint.ON_ANY_NETWORK)
