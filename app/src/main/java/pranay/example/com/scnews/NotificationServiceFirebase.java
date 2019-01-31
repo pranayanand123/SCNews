@@ -55,7 +55,7 @@ public class NotificationServiceFirebase extends JobService {
 
     private void loadJSON() {
         final ApiInterface apiInterface = ApiClient.getApiClient().create(ApiInterface.class);
-        String country = Utils.getCountry();
+        String country = Utils.getCountry(getApplicationContext());
         Log.d("NOTIFICATION", country);
         Call<News> call = apiInterface.getNews(country, API_KEY);
         call.enqueue(new Callback<News>() {
