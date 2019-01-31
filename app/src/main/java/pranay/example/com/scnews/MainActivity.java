@@ -24,6 +24,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.firebase.jobdispatcher.Constraint;
+import com.firebase.jobdispatcher.Driver;
+import com.firebase.jobdispatcher.FirebaseJobDispatcher;
+import com.firebase.jobdispatcher.GooglePlayDriver;
+import com.firebase.jobdispatcher.Job;
+import com.firebase.jobdispatcher.Lifetime;
+import com.firebase.jobdispatcher.RetryStrategy;
+import com.firebase.jobdispatcher.Trigger;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,9 +81,29 @@ public class MainActivity extends AppCompatActivity implements  SwipeRefreshLayo
 //        sqLiteDatabase.execSQL(cmd);
 
         onLoadingSwipeRefresh("");
+        notificationJob();
 
 
 
+
+    }
+
+    private void notificationJob() {
+        Driver driver = new GooglePlayDriver(this);
+        FirebaseJobDispatcher firebaseJobDispatcher = new FirebaseJobDispatcher(driver);
+
+        Job myJob = firebaseJobDispatcher.newJobBuilder()
+                .setTag("firebaseJob")
+                .setRecurring(true)
+                .setLifetime(Lifetime.FOREVER)
+                .setService(NotificationServiceFirebase.class)
+                .setTrigger(Trigger.executionWindow(0,20))
+                .setReplaceCurrent(false)
+                .setRetryStrategy(RetryStrategy.DEFAULT_EXPONENTIAL)
+                .setConstraints(Constraint.ON_ANY_NETWORK)
+                .build();
+
+        firebaseJobDispatcher.mustSchedule(myJob);
     }
 
     public void LoadJson(final String keyword) {

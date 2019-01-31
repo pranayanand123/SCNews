@@ -21,6 +21,13 @@
         </activity>
         <activity android:name=".FullArticle"
             android:theme="@style/AppTheme.NoActionBar"></activity>
+        <service
+            android:exported="false"
+            android:name=".NotificationServiceFirebase">
+            <intent-filter>
+                <action android:name="com.firebase.jobdispatcher.ACTION_EXECUTE"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
